@@ -1,0 +1,2 @@
+python demo.py  --config config\vox256.yaml --driving_video "..\ca\test-data\video01-crop.mp4" --source_image ..\ca\test-data\video01-crop-0.png --checkpoint checkpoints\vox256.pth --mode avd
+
