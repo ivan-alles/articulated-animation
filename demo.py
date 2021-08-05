@@ -101,11 +101,17 @@ def make_animation(source_image, driving_video, generator, region_predictor, avd
 
 
 def main(opt):
-    source_image = imageio.imread(opt.source_image)
+
     reader = imageio.get_reader(opt.driving_video)
     fps = reader.get_meta_data()['fps']
     reader.close()
     driving_video = imageio.mimread(opt.driving_video, memtest=False)
+
+    if opt.source_image.startswith('frame'):
+        frame_idx = int(opt.source_image[5:])
+        source_image = driving_video[frame_idx]
+    else:
+        source_image = imageio.imread(opt.source_image)
 
     source_image = resize(source_image, opt.img_shape)[..., :3]
     driving_video = [resize(frame, opt.img_shape)[..., :3] for frame in driving_video]
@@ -113,7 +119,18 @@ def main(opt):
                                                                 checkpoint_path=opt.checkpoint, cpu=opt.cpu)
     predictions = make_animation(source_image, driving_video, generator, region_predictor, avd_network,
                                  animation_mode=opt.mode, cpu=opt.cpu)
-    imageio.mimsave(opt.result_video, [img_as_ubyte(frame) for frame in predictions], fps=fps)
+
+    source_thumbnail = resize(source_image, (64, 64))
+    result = []
+    shape = driving_video[0].shape
+    for i in range(len(driving_video)):
+        r = np.zeros((shape[0], shape[1] * 2, shape[2]), driving_video[0].dtype)
+        r[:, :shape[1], :] = driving_video[i]
+        r[:, shape[1]:, :] = predictions[i]
+        r[:source_thumbnail.shape[0], :source_thumbnail.shape[1], :] = source_thumbnail
+        result.append(r)
+
+    imageio.mimsave(opt.result_video, [img_as_ubyte(frame) for frame in result], fps=fps)
 
 
 if __name__ == "__main__":
